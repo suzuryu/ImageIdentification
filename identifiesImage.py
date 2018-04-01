@@ -4,6 +4,14 @@ import cv2
 import os
 
 def create_canny_img(img_name):
+    """create 3 Mat from a image_file.
+    argument:
+        img_name (str): image file's name
+    return:
+        can_img (Mat):Edge detecion by canny
+        gau_can_img (Mat): Edge detection by canny after GaussianBlur
+        med_can_img (Mat): Edge detection by canny agter MedianBlur
+    """
     ave_square = (5, 5)
     # x軸方向の標準偏差
     sigma_x = 1
@@ -19,6 +27,13 @@ def create_canny_img(img_name):
     return can_img, gau_can_img, med_can_img
 
 def get_color(img_name):
+    """
+    argument:
+        img_name (str): file name
+        
+    return:
+        result (float): maxium value of the most used color 
+    """
     img_src = cv2.imread(img_name, cv2.IMREAD_UNCHANGED)
     
     same_colors = {}
@@ -33,18 +48,23 @@ def get_color(img_name):
     result = max(same_colors.values()) / len(img_src)
     print("color_result :",result)
     
-    plt.plot(np.arange(0, len(same_colors)), same_colors.values())
-    plt.ylim(1000)
-    plt.show()
     return result
     
-def cal_diff(mat, g_mat):
+def cal_diff(mat, c_mat):
+    """
+    argument:
+        mat (Mat): 
+        c_mat: 
+        
+    return:
+        result (float): mat diff
+    """
     sum_mat = 0
     for m in mat:
         for n in m:
             sum_mat += n
     sum_mat /= 255
-    diff = mat - g_mat
+    diff = mat - c_mat
     sum_diff = 0
     for d in diff:
         for n in d:
