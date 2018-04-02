@@ -95,7 +95,7 @@ def identifies_img(img_name):
     color_result = get_color(img_name)
     score = cal_score(gau_result, med_result, color_result) * 0.625
     print("score :", round(score, 3) ,end=" -->")
-    if score > 0.5:
+    if score >= 0.5:
         return "illust"
     else:
         return "picture"
