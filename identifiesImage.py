@@ -5,7 +5,7 @@ import sys
 
 import cv2
 
-def create_canny_img(img_src):
+def create_canny_img(gray_img_src):
     """create 3 Mat from a image_file.
     argument:
         img_name (str): image file's name
@@ -17,7 +17,8 @@ def create_canny_img(img_src):
     ave_square = (5, 5)
     # x軸方向の標準偏差
     sigma_x = 1
-    gray_img_src = cv2.cvtColor(img_src, cv2.COLOR_BGR2GRAY)
+    if type(img_src[0][0]) == np.ndarray:
+        gray_img_src = cv2.cvtColor(gray_img_src, cv2.COLOR_BGR2GRAY)
     can_img = cv2.Canny(gray_img_src, 100, 200)
     
     gau_img = cv2.GaussianBlur(gray_img_src, ave_square, sigma_x)
