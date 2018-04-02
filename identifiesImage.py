@@ -37,14 +37,22 @@ def get_color(img_name):
     img_src = cv2.imread(img_name, cv2.IMREAD_UNCHANGED)
     
     same_colors = {}
-    for row in img_src:
-        for at in row:
-            at = tuple(at)
-            if at in same_colors:
-                same_colors[at] += 1
-            else:
-                same_colors[at] = 0
-    
+    if type(src_img[0][0]) == np.ndarray:
+        for row in img_src:
+            for at in row:
+                at = tuple(at)
+                if at in same_colors:
+                    same_colors[at] += 1
+                else:
+                    same_colors[at] = 0
+    else:
+        for row in img_src:
+            for at in row:
+                if at in same_colors:
+                    same_colors[at] += 1
+                else:
+                    same_colors[at] = 0
+
     result = max(same_colors.values()) / len(img_src)
     print("color_result :",result)
     
