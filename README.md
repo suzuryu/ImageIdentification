@@ -1,9 +1,9 @@
-# ImgaIdentification
+# ImageIdentification
 Identifies Image. illust or picture
 
 HOW TO USE:
 ```
-$ python identifesImage.py image_file_path
+$ python identifiesImage.py image_file_path
 ```
 
 result example:
