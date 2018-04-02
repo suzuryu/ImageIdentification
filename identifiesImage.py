@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import cv2
 import os
+import sys
 
-def create_canny_img(img_name):
+import cv2
+
+def create_canny_img(img_src):
     """create 3 Mat from a image_file.
     argument:
         img_name (str): image file's name
@@ -15,7 +17,7 @@ def create_canny_img(img_name):
     ave_square = (5, 5)
     # x軸方向の標準偏差
     sigma_x = 1
-    gray_img_src = cv2.imread(img_name, cv2.IMREAD_GRAYSCALE)
+    gray_img_src = cv2.cvtColor(img_src, cv2.COLOR_BGR2GRAY)
     can_img = cv2.Canny(gray_img_src, 100, 200)
     
     gau_img = cv2.GaussianBlur(gray_img_src, ave_square, sigma_x)
@@ -26,7 +28,7 @@ def create_canny_img(img_name):
     
     return can_img, gau_can_img, med_can_img
 
-def get_color(img_name):
+def get_color(img_src):
     """
     argument:
         img_name (str): file name
@@ -34,10 +36,9 @@ def get_color(img_name):
     return:
         result (float): maxium value of the most used color 
     """
-    img_src = cv2.imread(img_name, cv2.IMREAD_UNCHANGED)
     
     same_colors = {}
-    if type(src_img[0][0]) == np.ndarray:
+    if type(img_src[0][0]) == np.ndarray:
         for row in img_src:
             for at in row:
                 at = tuple(at)
@@ -54,7 +55,6 @@ def get_color(img_name):
                     same_colors[at] = 0
 
     result = max(same_colors.values()) / len(img_src)
-    print("color_result :",result)
     
     return result
     
@@ -84,16 +84,24 @@ def cal_diff(mat, c_mat):
 
 def cal_score(gau_result, med_result, color_result):
     result1 = gau_result + med_result
-    print("result1 :", result1)
-    return (1 / result1) * 0.8 + (color_result / 100) * 0.2
+    return ((1 / result1) * 0.8 + (color_result / 100) * 0.2) * 0.625
 
+def resize_img(img_name):
+    img_src = cv2.imread(img_name, cv2.IMREAD_UNCHANGED)
+    print(len(img_src),len(img_src[0]))
+    
+    if len(img_src) > 2000 or len(img_src[0]) > 2000:
+        img_src = cv2.resize(img_src,(len(img_src) // 2, len(img_src[0]) // 2))
 
-def identifies_img(img_name):
-    can_img, gau_can_img, med_can_img = create_canny_img(img_name)
+    print(len(img_src),len(img_src[0]))
+    return img_src
+    
+def identifies_img(img_src):
+    can_img, gau_can_img, med_can_img = create_canny_img(img_src)
     gau_result = cal_diff(can_img, gau_can_img)
     med_result = cal_diff(can_img, med_can_img)
-    color_result = get_color(img_name)
-    score = cal_score(gau_result, med_result, color_result) * 0.625
+    color_result = get_color(img_src)
+    score = cal_score(gau_result, med_result, color_result)
     print("score :", round(score, 3) ,end=" -->")
     if score >= 0.5:
         return "illust"
@@ -101,27 +109,12 @@ def identifies_img(img_name):
         return "picture"
 
 if __name__ == "__main__":
-    dir_path = ".\\pictures\\"
-    num = 0
-    good = 0
-    for pic_path in os.listdir(dir_path):
-        print("----- ", dir_path, " -----")
-        result = identifies_img(dir_path + pic_path)
-        print(result)
-        if result == "picture":
-            good += 1
-        num += 1
-    print("score :", good / num)
-
-
-    dir_path = ".\\illusts\\"
-    num = 0
-    good = 0
-    for pic_path in os.listdir(dir_path):
-        print("----- ", dir_path, " -----")
-        result = identifies_img(dir_path + pic_path)
-        print(result)
-        if result == "illust":
-            good += 1
-        num += 1
-    print("score :", good / num)
+    argv = sys.argv    
+    if len(argv) != 2:
+        print("argument error")
+        sys.exit()
+    
+    img_name = argv[1]
+    img_src = resize_img(img_name)
+    result = identifies_img(img_src)
+    print(result)
