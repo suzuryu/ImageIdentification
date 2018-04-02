@@ -3,10 +3,10 @@ Identifies Image. illust or picture
 
 HOW TO USE:
 ```
-$ python imageidentifes.py file_path
+$ python identifesImage.py image_file_path
 ```
 
-result:
+result example:
 ```
 score : 0.8 -->illust
 ```
