@@ -1,4 +1,12 @@
 # ImgaIdentification
 Identifies Image. illust or picture
 
-idetifies_img()に識別したい画像ファイルの名前を渡すと，"illust"か"picture"の文字列で帰ってきます．
+HOW TO USE:
+```
+$ python imageidentifes.py file_path
+```
+
+result:
+```
+score : 0.8 -->illust
+```
