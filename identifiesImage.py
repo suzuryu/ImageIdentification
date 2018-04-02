@@ -88,12 +88,10 @@ def cal_score(gau_result, med_result, color_result):
 
 def resize_img(img_name):
     img_src = cv2.imread(img_name, cv2.IMREAD_UNCHANGED)
-    print(len(img_src),len(img_src[0]))
     
     if len(img_src) > 2000 or len(img_src[0]) > 2000:
         img_src = cv2.resize(img_src,(len(img_src) // 2, len(img_src[0]) // 2))
 
-    print(len(img_src),len(img_src[0]))
     return img_src
     
 def identifies_img(img_src):
