@@ -1,118 +1,164 @@
 import numpy as np
 import os
 import sys
-
+from typing import Tuple, Dict, Union
 import cv2
 
-def create_canny_img(gray_img_src):
-    """create 3 Mat from a image_file.
-    argument:
-        img_name (str): image file's name
-    return:
-        can_img (Mat):Edge detecion by canny
-        gau_can_img (Mat): Edge detection by canny after GaussianBlur
-        med_can_img (Mat): Edge detection by canny agter MedianBlur
+# Constants
+CANNY_THRESHOLD_LOW = 100
+CANNY_THRESHOLD_HIGH = 200
+GAUSSIAN_KERNEL_SIZE = (5, 5)
+GAUSSIAN_SIGMA_X = 1
+MEDIAN_KERNEL_SIZE = 5
+MAX_IMAGE_SIZE = 2000
+SCORE_THRESHOLD = 0.5
+SCORE_WEIGHTS = {
+    'edge': 0.8,
+    'color': 0.2
+}
+SCORE_MULTIPLIER = 0.625
+
+def create_canny_img(gray_img_src: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Create three edge-detected images using different preprocessing methods.
+    
+    Args:
+        gray_img_src (np.ndarray): Input grayscale image
+        
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: Three edge-detected images:
+            - Canny edge detection on original image
+            - Canny edge detection after Gaussian blur
+            - Canny edge detection after Median blur
     """
-    ave_square = (5, 5)
-    # x軸方向の標準偏差
-    sigma_x = 1
-    if type(img_src[0][0]) == np.ndarray:
+    if isinstance(gray_img_src[0][0], np.ndarray):
         gray_img_src = cv2.cvtColor(gray_img_src, cv2.COLOR_BGR2GRAY)
-    can_img = cv2.Canny(gray_img_src, 100, 200)
     
-    gau_img = cv2.GaussianBlur(gray_img_src, ave_square, sigma_x)
-    gau_can_img = cv2.Canny(gau_img, 100, 200)
+    # Original Canny
+    can_img = cv2.Canny(gray_img_src, CANNY_THRESHOLD_LOW, CANNY_THRESHOLD_HIGH)
     
-    med_img = cv2.medianBlur(gray_img_src, ksize=5)
-    med_can_img = cv2.Canny(med_img, 100, 200)
+    # Gaussian blur + Canny
+    gau_img = cv2.GaussianBlur(gray_img_src, GAUSSIAN_KERNEL_SIZE, GAUSSIAN_SIGMA_X)
+    gau_can_img = cv2.Canny(gau_img, CANNY_THRESHOLD_LOW, CANNY_THRESHOLD_HIGH)
     
+    # Median blur + Canny
+    med_img = cv2.medianBlur(gray_img_src, MEDIAN_KERNEL_SIZE)
+    med_can_img = cv2.Canny(med_img, CANNY_THRESHOLD_LOW, CANNY_THRESHOLD_HIGH)
+ 
     return can_img, gau_can_img, med_can_img
 
-def get_color(img_src):
-    """
-    argument:
-        img_name (str): file name
-        
-    return:
-        result (float): maxium value of the most used color 
-    """
+def get_color(img_src: np.ndarray) -> float:
+    """Calculate the color distribution score of the image.
     
-    same_colors = {}
-    if type(img_src[0][0]) == np.ndarray:
+    Args:
+        img_src (np.ndarray): Input image
+        
+    Returns:
+        float: Maximum value of the most used color normalized by image size
+    """
+    color_counts: Dict[Union[Tuple, int], int] = {}
+    
+    if isinstance(img_src[0][0], np.ndarray):
         for row in img_src:
-            for at in row:
-                at = tuple(at)
-                if at in same_colors:
-                    same_colors[at] += 1
-                else:
-                    same_colors[at] = 0
+            for pixel in row:
+                pixel_tuple = tuple(pixel)
+                color_counts[pixel_tuple] = color_counts.get(pixel_tuple, 0) + 1
     else:
         for row in img_src:
-            for at in row:
-                if at in same_colors:
-                    same_colors[at] += 1
-                else:
-                    same_colors[at] = 0
+            for pixel in row:
+                color_counts[pixel] = color_counts.get(pixel, 0) + 1
 
-    result = max(same_colors.values()) / len(img_src)
+    return max(color_counts.values()) / len(img_src)
+
+def calculate_difference(mat: np.ndarray, c_mat: np.ndarray) -> float:
+    """Calculate the normalized difference between two matrices.
     
-    return result
-    
-def cal_diff(mat, c_mat):
-    """
-    argument:
-        mat (Mat): 
-        c_mat: 
+    Args:
+        mat (np.ndarray): First matrix
+        c_mat (np.ndarray): Second matrix
         
-    return:
-        result (float): mat diff
+    Returns:
+        float: Normalized difference between matrices
     """
-    sum_mat = 0
-    for m in mat:
-        for n in m:
-            sum_mat += n
-    sum_mat /= 255
+    sum_mat = np.sum(mat) / 255
     diff = mat - c_mat
-    sum_diff = 0
-    for d in diff:
-        for n in d:
-            sum_diff += n
-    sum_diff /= 255
-    result = sum_diff / sum_mat
+    sum_diff = np.sum(diff) / 255
+    return sum_diff / sum_mat if sum_mat != 0 else 0
+
+def calculate_score(gau_result: float, med_result: float, color_result: float) -> float:
+    """Calculate the final score for image classification.
     
-    return result
-
-def cal_score(gau_result, med_result, color_result):
-    result1 = gau_result + med_result
-    return ((1 / result1) * 0.8 + (color_result / 100) * 0.2) * 0.625
-
-def resize_img(img_name):
-    img_src = cv2.imread(img_name, cv2.IMREAD_UNCHANGED)
+    Args:
+        gau_result (float): Gaussian blur difference score
+        med_result (float): Median blur difference score
+        color_result (float): Color distribution score
+        
+    Returns:
+        float: Final classification score
+    """
+    edge_score = gau_result + med_result
+    if edge_score == 0:
+        return 0
     
-    if len(img_src) > 2000 or len(img_src[0]) > 2000:
-        img_src = cv2.resize(img_src,(len(img_src) // 2, len(img_src[0]) // 2))
+    return ((1 / edge_score) * SCORE_WEIGHTS['edge'] + 
+            (color_result / 100) * SCORE_WEIGHTS['color']) * SCORE_MULTIPLIER
 
+def resize_image(img_src: np.ndarray) -> np.ndarray:
+    """Resize image if it exceeds maximum dimensions.
+    
+    Args:
+        img_src (np.ndarray): Input image
+        
+    Returns:
+        np.ndarray: Resized image if necessary
+    """
+    height, width = img_src.shape[:2]
+    if height > MAX_IMAGE_SIZE or width > MAX_IMAGE_SIZE:
+        return cv2.resize(img_src, (width // 2, height // 2))
     return img_src
+
+def identify_image(img_src: np.ndarray) -> str:
+    """Identify if the image is an illustration or a photograph.
     
-def identifies_img(img_src):
+    Args:
+        img_src (np.ndarray): Input image
+        
+    Returns:
+        str: 'illust' for illustration, 'picture' for photograph
+    """
     can_img, gau_can_img, med_can_img = create_canny_img(img_src)
-    gau_result = cal_diff(can_img, gau_can_img)
-    med_result = cal_diff(can_img, med_can_img)
+    gau_result = calculate_difference(can_img, gau_can_img)
+    med_result = calculate_difference(can_img, med_can_img)
     color_result = get_color(img_src)
-    score = cal_score(gau_result, med_result, color_result)
-    print("score :", round(score, 3) ,end=" -->")
-    if score >= 0.5:
-        return "illust"
-    else:
-        return "picture"
+    
+    score = calculate_score(gau_result, med_result, color_result)
+    print(f"score: {round(score, 3)} -->", end="")
+    
+    return "illust" if score >= SCORE_THRESHOLD else "picture"
+
+def main():
+    """Main function to process command line arguments and identify image."""
+    if len(sys.argv) != 2:
+        print("Error: Please provide an image file path as argument")
+        sys.exit(1)
+    
+    img_name = sys.argv[1]
+    if not os.path.exists(img_name):
+        print(f"Error: File '{img_name}' does not exist")
+        sys.exit(1)
+        
+    try:
+        img_src = cv2.imread(img_name, cv2.IMREAD_UNCHANGED)
+        if img_src is None:
+            print(f"Error: Could not read image '{img_name}'")
+            sys.exit(1)
+            
+        img_src = resize_image(img_src)
+        result = identify_image(img_src)
+        print(result)
+        
+    except Exception as e:
+        print(f"Error processing image: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    argv = sys.argv    
-    if len(argv) != 2:
-        print("argument error")
-        sys.exit()
-    
-    img_name = argv[1]
-    img_src = resize_img(img_name)
-    result = identifies_img(img_src)
-    print(result)
+    main()
